@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Algoritmos de Ordenamiento en WebAssembly</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .algorithm {
+            margin: 20px;
+            text-align: center;
+        }
+        .bars {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            height: 200px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .bar {
+            width: 10px;
+            background-color: #4CAF50;
+            margin: 0 2px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Algoritmos de Búsqueda y Ordenamiento en WebAssembly</h1>
+    <div class="container">
+        <div class="algorithm">
+            <h2>Burbuja</h2>
+            <div class="bars" id="burbuja-bars"></div>
+        </div>
+        <div class="algorithm">
+            <h2>Busqueda Binaria</h2>
+            <div class="bars" id="busqueda-binaria-bars"></div>
+        </div>
+        <div class="algorithm">
+            <h2>Busqueda Secuencial</h2>
+            <div class="bars" id="busqueda-secuencial-bars"></div>
+        </div>
+        <div class="algorithm">
+            <h2>Insercion</h2>
+            <div class="bars" id="insercion-bars"></div>
+        </div>
+        <div class="algorithm">
+            <h2>Quick Sort</h2>
+            <div class="bars" id="quick-sort-bars"></div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
