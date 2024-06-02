@@ -1,13 +1,16 @@
 const algorithms = [
     { name: 'burbuja', func: '_burbuja', elementId: 'burbuja-bars', valuesId: 'burbuja-values' },
-    { name: 'busqueda_binaria', func: '_busqueda_binaria', elementId: 'busqueda-binaria-bars', valuesId: 'busqueda-binaria-values' },
-    { name: 'busqueda_secuencial', func: '_busqueda_secuencial', elementId: 'busqueda-secuencial-bars', valuesId: 'busqueda-secuencial-values' },
     { name: 'insercion', func: '_insercion', elementId: 'insercion-bars', valuesId: 'insercion-values' },
     { name: 'quick_sort', func: '_quick_sort', elementId: 'quick-sort-bars', valuesId: 'quick-sort-values' },
 ];
 
+const searchAlgorithms = [
+    { name: 'busqueda_secuencial', func: '_busqueda_secuencial', elementId: 'busqueda-secuencial-search' },
+    { name: 'busqueda_binaria', func: '_busqueda_binaria', elementId: 'busqueda-binaria-search' },
+];
+
 const originalArray = [64, 25, 12, 22, 11];
-const animationSpeed = 500; // Cambiar según se desee
+const animationSpeed = 500; // Cambiar segun se desee
 
 const createBars = (array, elementId, valuesId) => {
     const container = document.getElementById(elementId);
@@ -39,6 +42,30 @@ const animateSorting = (sortedArray, elementId, valuesId) => {
     }, animationSpeed);
 };
 
+const createSearchItems = (array, elementId) => {
+    const container = document.getElementById(elementId);
+    container.innerHTML = '';
+    array.forEach(value => {
+        const item = document.createElement('div');
+        item.classList.add('search-item');
+        item.innerText = value;
+        container.appendChild(item);
+    });
+};
+
+const animateSearch = (array, elementId, index, found) => {
+    const items = document.getElementById(elementId).children;
+    for (let i = 0; i < items.length; i++) {
+        items[i].classList.remove('checked', 'found');
+        if (i <= index) {
+            items[i].classList.add('checked');
+        }
+        if (i === index && found) {
+            items[i].classList.add('found');
+        }
+    }
+};
+
 const runAlgorithm = async (wasmFile, funcName, originalArray, elementId, valuesId) => {
     const response = await fetch(wasmFile);
     const buffer = await response.arrayBuffer();
@@ -55,8 +82,35 @@ const runAlgorithm = async (wasmFile, funcName, originalArray, elementId, values
     const snapshotMemory = new Int32Array(memory.buffer, 0, length);
 
     if (funcName.includes('busqueda')) {
-        const result = func(0, length, 22); // Suponiendo que el valor a buscar es 22
-        console.log(`Resultado de ${funcName}: ${result}`);
+        const searchArray = [...originalArray].sort((a, b) => a - b);
+        createSearchItems(searchArray, elementId);
+        let found = false;
+        let index = 0;
+        if (funcName === '_busqueda_secuencial') {
+            for (let i = 0; i < searchArray.length; i++) {
+                if (searchArray[i] === 22) {
+                    index = i;
+                    found = true;
+                    break;
+                }
+            }
+        } else if (funcName === '_busqueda_binaria') {
+            let inicio = 0, fin = searchArray.length - 1;
+            while (inicio <= fin) {
+                let medio = Math.floor((inicio + fin) / 2);
+                if (searchArray[medio] === 22) {
+                    index = medio;
+                    found = true;
+                    break;
+                }
+                if (searchArray[medio] < 22) {
+                    inicio = medio + 1;
+                } else {
+                    fin = medio - 1;
+                }
+            }
+        }
+        animateSearch(searchArray, elementId, index, found);
         return;
     }
 
@@ -78,4 +132,8 @@ const runAlgorithm = async (wasmFile, funcName, originalArray, elementId, values
 algorithms.forEach(algo => {
     createBars(originalArray, algo.elementId, algo.valuesId);
     runAlgorithm(`dist/${algo.name}.wasm`, algo.func, originalArray, algo.elementId, algo.valuesId);
+});
+
+searchAlgorithms.forEach(algo => {
+    runAlgorithm(`dist/${algo.name}.wasm`, algo.func, originalArray, algo.elementId);
 });
