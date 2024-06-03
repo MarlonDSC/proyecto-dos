@@ -3,12 +3,24 @@ onmessage = async (e) => {
     const response = await fetch(wasmFile);
     const buffer = await response.arrayBuffer();
     const module = await WebAssembly.compile(buffer);
-    const instance = await WebAssembly.instantiate(module);
-    const { memory, [funcName]: func } = instance.exports;
+    const instance = await WebAssembly.instantiate(module, {
+        env: {
+            memory: new WebAssembly.Memory({ initial: 256, maximum: 256 }),
+            table: new WebAssembly.Table({ initial: 0, element: 'anyfunc' }),
+        },
+    });
+
+    const { memory, [funcName.replace(/^_/, '')]: func } = instance.exports;
 
     const length = originalArray.length;
     const wasmMemory = new Int32Array(memory.buffer, 0, length);
     wasmMemory.set(originalArray);
+
+    const sortedArray = [];
+
+    const snapshotMemory = () => {
+        sortedArray.push([...wasmMemory]);
+    };
 
     if (funcName.includes('busqueda')) {
         const searchArray = [...originalArray].sort((a, b) => a - b);
@@ -42,56 +54,9 @@ onmessage = async (e) => {
         return;
     }
 
-    const sortedArray = [];
-    if (funcName === '_burbuja') {
-        for (let i = 0; i < length; i++) {
-            for (let j = 0; j < length - i - 1; j++) {
-                if (wasmMemory[j] > wasmMemory[j + 1]) {
-                    [wasmMemory[j], wasmMemory[j + 1]] = [wasmMemory[j + 1], wasmMemory[j]];
-                    sortedArray.push([...wasmMemory]);
-                }
-            }
-        }
-    } else if (funcName === '_insercion') {
-        for (let i = 1; i < length; i++) {
-            let key = wasmMemory[i];
-            let j = i - 1;
-            while (j >= 0 && wasmMemory[j] > key) {
-                wasmMemory[j + 1] = wasmMemory[j];
-                j = j - 1;
-            }
-            wasmMemory[j + 1] = key;
-            sortedArray.push([...wasmMemory]);
-        }
-    } else if (funcName === '_quick_sort') {
-        const quickSort = (arr, left, right) => {
-            let len = arr.length,
-                pivot,
-                partitionIndex;
-            if (left < right) {
-                pivot = right;
-                partitionIndex = partition(arr, pivot, left, right);
-                quickSort(arr, left, partitionIndex - 1);
-                quickSort(arr, partitionIndex + 1, right);
-                sortedArray.push([...arr]);
-            }
-            return arr;
-        };
-
-        const partition = (arr, pivot, left, right) => {
-            let pivotValue = arr[pivot],
-                partitionIndex = left;
-            for (let i = left; i < right; i++) {
-                if (arr[i] < pivotValue) {
-                    [arr[i], arr[partitionIndex]] = [arr[partitionIndex], arr[i]];
-                    partitionIndex++;
-                }
-            }
-            [arr[right], arr[partitionIndex]] = [arr[partitionIndex], arr[right]];
-            return partitionIndex;
-        };
-
-        quickSort(wasmMemory, 0, length - 1);
+    if (funcName === '_burbuja' || funcName === '_insercion' || funcName === '_quick_sort') {
+        func(0, length);
+        snapshotMemory();
     }
 
     postMessage({ type: 'sort', sortedArray });
