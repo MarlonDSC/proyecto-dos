@@ -10,7 +10,15 @@ onmessage = async (e) => {
         },
     });
 
+    console.log('Exported functions:', Object.keys(instance.exports));
+
+    // Remove the leading underscore from funcName
     const { memory, [funcName.replace(/^_/, '')]: func } = instance.exports;
+
+    if (typeof func !== 'function') {
+        console.error(`Exported function ${funcName} is not a function`);
+        return;
+    }
 
     const length = originalArray.length;
     const wasmMemory = new Int32Array(memory.buffer, 0, length);
@@ -24,32 +32,21 @@ onmessage = async (e) => {
 
     if (funcName.includes('busqueda')) {
         const searchArray = [...originalArray].sort((a, b) => a - b);
-        let found = false;
         let steps = [];
-        if (funcName === '_busqueda_secuencial') {
+        let found = false;
+
+        if (funcName === '_busqueda_secuencial' || funcName === '_busqueda_binaria') {
             for (let i = 0; i < searchArray.length; i++) {
-                steps.push({ index: i, found: searchArray[i] === 22 });
-                if (searchArray[i] === 22) {
+                wasmMemory.set(searchArray);
+                const result = func(i, 22);
+                steps.push({ index: i, found: result === 1 });
+                if (result === 1) {
                     found = true;
                     break;
-                }
-            }
-        } else if (funcName === '_busqueda_binaria') {
-            let inicio = 0, fin = searchArray.length - 1;
-            while (inicio <= fin) {
-                let medio = Math.floor((inicio + fin) / 2);
-                steps.push({ index: medio, found: searchArray[medio] === 22 });
-                if (searchArray[medio] === 22) {
-                    found = true;
-                    break;
-                }
-                if (searchArray[medio] < 22) {
-                    inicio = medio + 1;
-                } else {
-                    fin = medio - 1;
                 }
             }
         }
+
         postMessage({ type: 'search', steps });
         return;
     }
