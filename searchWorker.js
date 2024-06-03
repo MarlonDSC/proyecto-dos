@@ -32,21 +32,18 @@ onmessage = async (e) => {
         const wasmMemory = new Int32Array(memory.buffer, 0, length);
         wasmMemory.set(originalArray);
 
-        if (funcName.includes('busqueda')) {
-            const searchValue = 22; // Valor de búsqueda, puedes cambiarlo según sea necesario
-            func(wasmMemory.byteOffset / 4, length, searchValue);
-        } else {
-            func(wasmMemory.byteOffset / 4, length);
-        }
+        const searchValue = 22; // Valor de búsqueda, puedes cambiarlo según sea necesario
+        func(wasmMemory.byteOffset / 4, length, searchValue);
 
         const stepCount = get_step_count();
         const steps = [];
         for (let i = 0; i < stepCount; i++) {
-            const step = new Int32Array(memory.buffer, get_steps() + i * length * 4, length);
+            const stepLength = length - i; // Adjust the length for each step
+            const step = new Int32Array(memory.buffer, get_steps() + i * (stepLength + 1) * 4, stepLength + 1);
             steps.push([...step]);
         }
 
-        postMessage({ type: funcName.includes('busqueda') ? 'search' : 'sort', steps });
+        postMessage({ type: 'search', steps });
     } catch (error) {
         console.error('Error in WebAssembly processing:', error);
         postMessage({ type: 'error', message: error.message });
