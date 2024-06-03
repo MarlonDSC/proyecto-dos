@@ -1,7 +1,7 @@
 #include <emscripten/emscripten.h>
 
 EMSCRIPTEN_KEEPALIVE
-int busqueda_binaria(int arr[], int n, int x) {
+int busqueda_binaria(int* arr, int n, int x) {
     int inicio = 0, fin = n - 1;
     while (inicio <= fin) {
         int medio = inicio + (fin - inicio) / 2;

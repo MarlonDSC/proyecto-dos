@@ -1,7 +1,7 @@
 #include <emscripten/emscripten.h>
 
 EMSCRIPTEN_KEEPALIVE
-void insercion(int arr[], int n) {
+void insercion(int* arr, int n) {
     for (int i = 1; i < n; i++) {
         int key = arr[i];
         int j = i - 1;

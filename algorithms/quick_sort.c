@@ -6,7 +6,7 @@ void swap(int* a, int* b) {
     *b = t;
 }
 
-int particion(int arr[], int bajo, int alto) {
+int particion(int* arr, int bajo, int alto) {
     int pivote = arr[alto];
     int i = (bajo - 1);
     for (int j = bajo; j <= alto - 1; j++) {
@@ -20,7 +20,7 @@ int particion(int arr[], int bajo, int alto) {
 }
 
 EMSCRIPTEN_KEEPALIVE
-void quick_sort(int arr[], int bajo, int alto) {
+void quick_sort(int* arr, int bajo, int alto) {
     if (bajo < alto) {
         int pi = particion(arr, bajo, alto);
         quick_sort(arr, bajo, pi - 1);
