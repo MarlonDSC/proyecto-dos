@@ -18,6 +18,8 @@ const originalArray = [
     306, 408, 510, 612, 714, 816, 918, 103, 206, 309, 412, 515, 618, 721, 824, 927
 ];
 
+const searchArray = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+
 const createBars = (array, elementId, valuesId) => {
     const container = document.getElementById(elementId);
     const valuesContainer = document.getElementById(valuesId);
@@ -65,8 +67,11 @@ const animateSearch = (array, elementId, steps, animationSpeed) => {
                 const item = document.createElement('div');
                 item.classList.add('search-item');
                 item.innerText = value;
-                if (step.index === i) {
-                    item.classList.add(step.found ? 'found' : 'checked');
+                if (step[i] === value) {
+                    item.classList.add('checked');
+                }
+                if (i === step[step.length - 1]) {
+                    item.classList.add('result');
                 }
                 row.appendChild(item);
             });
@@ -75,8 +80,8 @@ const animateSearch = (array, elementId, steps, animationSpeed) => {
     });
 };
 
-const runWorker = (wasmFile, funcName, originalArray, elementId, valuesId) => {
-    const worker = new Worker('worker.js');
+const runSortWorker = (wasmFile, funcName, originalArray, elementId, valuesId) => {
+    const worker = new Worker('sortWorker.js');
     const startTime = performance.now();
     worker.postMessage({ wasmFile, funcName, originalArray });
 
@@ -87,10 +92,40 @@ const runWorker = (wasmFile, funcName, originalArray, elementId, valuesId) => {
 
         if (type === 'sort') {
             console.log(`Execution time for ${funcName}: ${executionTime}ms`);
-            animateSorting(steps, elementId, valuesId, executionTime / steps.length);
-        } else if (type === 'search') {
+            if (steps && steps.length) {
+                animateSorting(steps, elementId, valuesId, executionTime / steps.length);
+            } else {
+                console.error('No steps received for sorting.');
+            }
+        } else if (type === 'error') {
+            console.error(`Error from worker: ${e.data.message}`);
+        }
+    };
+
+    worker.onerror = (e) => {
+        console.error(`Error in worker: ${e.message}`);
+    };
+};
+
+const runSearchWorker = (wasmFile, funcName, originalArray, elementId) => {
+    const worker = new Worker('searchWorker.js');
+    const startTime = performance.now();
+    worker.postMessage({ wasmFile, funcName, originalArray });
+
+    worker.onmessage = (e) => {
+        const { type, steps } = e.data;
+        const endTime = performance.now();
+        const executionTime = endTime - startTime;
+
+        if (type === 'search') {
             console.log(`Execution time for ${funcName}: ${executionTime}ms`);
-            animateSearch(originalArray, elementId, steps, executionTime / steps.length);
+            if (steps && steps.length) {
+                animateSearch(originalArray, elementId, steps, executionTime / steps.length);
+            } else {
+                console.error('No steps received for search.');
+            }
+        } else if (type === 'error') {
+            console.error(`Error from worker: ${e.data.message}`);
         }
     };
 
@@ -102,11 +137,11 @@ const runWorker = (wasmFile, funcName, originalArray, elementId, valuesId) => {
 const runAllWorkers = () => {
     algorithms.forEach(algo => {
         createBars(originalArray, algo.elementId, algo.valuesId);
-        runWorker(`dist/${algo.name}.wasm`, algo.func, originalArray, algo.elementId, algo.valuesId);
+        runSortWorker(`dist/${algo.name}.wasm`, algo.func, originalArray, algo.elementId, algo.valuesId);
     });
-
     searchAlgorithms.forEach(algo => {
-        runWorker(`dist/${algo.name}.wasm`, algo.func, originalArray, algo.elementId);
+        createSearchItems(searchArray, algo.elementId);
+        runSearchWorker(`dist/${algo.name}.wasm`, algo.func, searchArray, algo.elementId);
     });
 };
 
