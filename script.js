@@ -63,13 +63,10 @@ const animateSearch = (array, elementId, steps, animationSpeed) => {
         setTimeout(() => {
             const row = document.createElement('div');
             row.classList.add('search-row');
-            array.forEach((value, i) => {
+            step.slice(0, -1).forEach((value, i) => {
                 const item = document.createElement('div');
                 item.classList.add('search-item');
                 item.innerText = value;
-                if (step[i] === value) {
-                    item.classList.add('checked');
-                }
                 if (i === step[step.length - 1]) {
                     item.classList.add('result');
                 }
@@ -139,6 +136,7 @@ const runAllWorkers = () => {
         createBars(originalArray, algo.elementId, algo.valuesId);
         runSortWorker(`dist/${algo.name}.wasm`, algo.func, originalArray, algo.elementId, algo.valuesId);
     });
+
     searchAlgorithms.forEach(algo => {
         createSearchItems(searchArray, algo.elementId);
         runSearchWorker(`dist/${algo.name}.wasm`, algo.func, searchArray, algo.elementId);
