@@ -1,12 +1,12 @@
 const algorithms = [
-    { name: 'burbuja', func: '_burbuja', elementId: 'burbuja-bars', valuesId: 'burbuja-values' },
-    { name: 'insercion', func: '_insercion', elementId: 'insercion-bars', valuesId: 'insercion-values' },
-    { name: 'quick_sort', func: '_quick_sort', elementId: 'quick-sort-bars', valuesId: 'quick-sort-values' },
+    { name: 'burbuja', func: 'burbuja', elementId: 'burbuja-bars', valuesId: 'burbuja-values' },
+    { name: 'insercion', func: 'insercion', elementId: 'insercion-bars', valuesId: 'insercion-values' },
+    { name: 'quick_sort', func: 'quick_sort', elementId: 'quick-sort-bars', valuesId: 'quick-sort-values' },
 ];
 
 const searchAlgorithms = [
-    { name: 'busqueda_secuencial', func: '_busqueda_secuencial', elementId: 'busqueda-secuencial-search' },
-    { name: 'busqueda_binaria', func: '_busqueda_binaria', elementId: 'busqueda-binaria-search' },
+    { name: 'busqueda_secuencial', func: 'busqueda_secuencial', elementId: 'busqueda-secuencial-search' },
+    { name: 'busqueda_binaria', func: 'busqueda_binaria', elementId: 'busqueda-binaria-search' },
 ];
 
 const originalArray = [
@@ -77,26 +77,38 @@ const animateSearch = (array, elementId, steps, animationSpeed) => {
 
 const runWorker = (wasmFile, funcName, originalArray, elementId, valuesId) => {
     const worker = new Worker('worker.js');
+    const startTime = performance.now();
     worker.postMessage({ wasmFile, funcName, originalArray });
 
     worker.onmessage = (e) => {
-        const { type, sortedArray, steps } = e.data;
+        const { type, steps } = e.data;
+        const endTime = performance.now();
+        const executionTime = endTime - startTime;
 
         if (type === 'sort') {
-            const executionTime = performance.now() / sortedArray.length;
-            animateSorting(sortedArray, elementId, valuesId, executionTime);
+            console.log(`Execution time for ${funcName}: ${executionTime}ms`);
+            animateSorting(steps, elementId, valuesId, executionTime / steps.length);
         } else if (type === 'search') {
-            const executionTime = performance.now() / steps.length;
-            animateSearch(originalArray, elementId, steps, executionTime);
+            console.log(`Execution time for ${funcName}: ${executionTime}ms`);
+            animateSearch(originalArray, elementId, steps, executionTime / steps.length);
         }
+    };
+
+    worker.onerror = (e) => {
+        console.error(`Error in worker: ${e.message}`);
     };
 };
 
-algorithms.forEach(algo => {
-    createBars(originalArray, algo.elementId, algo.valuesId);
-    runWorker(`dist/${algo.name}.wasm`, algo.func, originalArray, algo.elementId, algo.valuesId);
-});
+const runAllWorkers = () => {
+    algorithms.forEach(algo => {
+        createBars(originalArray, algo.elementId, algo.valuesId);
+        runWorker(`dist/${algo.name}.wasm`, algo.func, originalArray, algo.elementId, algo.valuesId);
+    });
 
-searchAlgorithms.forEach(algo => {
-    runWorker(`dist/${algo.name}.wasm`, algo.func, originalArray, algo.elementId);
-});
+    searchAlgorithms.forEach(algo => {
+        runWorker(`dist/${algo.name}.wasm`, algo.func, originalArray, algo.elementId);
+    });
+};
+
+// Run all workers
+runAllWorkers();

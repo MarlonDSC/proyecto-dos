@@ -1,60 +1,54 @@
 onmessage = async (e) => {
     const { wasmFile, funcName, originalArray } = e.data;
-    const response = await fetch(wasmFile);
-    const buffer = await response.arrayBuffer();
-    const module = await WebAssembly.compile(buffer);
-    const instance = await WebAssembly.instantiate(module, {
-        env: {
-            memory: new WebAssembly.Memory({ initial: 256, maximum: 256 }),
-            table: new WebAssembly.Table({ initial: 0, element: 'anyfunc' }),
-        },
-    });
-
-    console.log('Exported functions:', Object.keys(instance.exports));
-
-    // Remove the leading underscore from funcName
-    const { memory, [funcName.replace(/^_/, '')]: func } = instance.exports;
-
-    if (typeof func !== 'function') {
-        console.error(`Exported function ${funcName} is not a function`);
-        return;
-    }
-
-    const length = originalArray.length;
-    const wasmMemory = new Int32Array(memory.buffer, 0, length);
-    wasmMemory.set(originalArray);
-
-    const sortedArray = [];
-
-    const snapshotMemory = () => {
-        sortedArray.push([...wasmMemory]);
-    };
-
-    if (funcName.includes('busqueda')) {
-        const searchArray = [...originalArray].sort((a, b) => a - b);
-        let steps = [];
-        let found = false;
-
-        if (funcName === '_busqueda_secuencial' || funcName === '_busqueda_binaria') {
-            for (let i = 0; i < searchArray.length; i++) {
-                wasmMemory.set(searchArray);
-                const result = func(i, 22);
-                steps.push({ index: i, found: result === 1 });
-                if (result === 1) {
-                    found = true;
-                    break;
+    try {
+        const response = await fetch(wasmFile);
+        const buffer = await response.arrayBuffer();
+        const module = await WebAssembly.compile(buffer);
+        const instance = await WebAssembly.instantiate(module, {
+            env: {
+                memory: new WebAssembly.Memory({ initial: 256, maximum: 256 }),
+                table: new WebAssembly.Table({ initial: 0, element: 'anyfunc' }),
+                _emscripten_memcpy_js: (dest, src, num) => {
+                    const mem = new Uint8Array(instance.exports.memory.buffer);
+                    mem.set(mem.subarray(src, src + num), dest);
+                },
+                emscripten_resize_heap: (size) => {
+                    console.warn(`emscripten_resize_heap called with size ${size}`);
+                    return false;
                 }
-            }
+            },
+        });
+
+        console.log('Exported functions:', Object.keys(instance.exports));
+
+        const { memory, [funcName]: func, get_steps, get_step_count } = instance.exports;
+
+        if (typeof func !== 'function') {
+            console.error(`Exported function ${funcName} is not a function`);
+            return;
         }
 
-        postMessage({ type: 'search', steps });
-        return;
-    }
+        const length = originalArray.length;
+        const wasmMemory = new Int32Array(memory.buffer, 0, length);
+        wasmMemory.set(originalArray);
 
-    if (funcName === '_burbuja' || funcName === '_insercion' || funcName === '_quick_sort') {
-        func(0, length);
-        snapshotMemory();
-    }
+        if (funcName.includes('busqueda')) {
+            const searchValue = 22; // Valor de búsqueda, puedes cambiarlo según sea necesario
+            func(wasmMemory.byteOffset / 4, length, searchValue);
+        } else {
+            func(wasmMemory.byteOffset / 4, length);
+        }
 
-    postMessage({ type: 'sort', sortedArray });
+        const stepCount = get_step_count();
+        const steps = [];
+        for (let i = 0; i < stepCount; i++) {
+            const step = new Int32Array(memory.buffer, get_steps() + i * length * 4, length);
+            steps.push([...step]);
+        }
+
+        postMessage({ type: funcName.includes('busqueda') ? 'search' : 'sort', steps });
+    } catch (error) {
+        console.error('Error in WebAssembly processing:', error);
+        postMessage({ type: 'error', message: error.message });
+    }
 };
